@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Case Reminder | Law Firm</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <img src="lawfirm logo.jpeg" alt="Alethia LP Logo" class="logo">
+      <div>
+        <h1>Alethia LP</h1>
+        <p class="subtitle">Case Reminder System</p>
+      </div>
+    </div>
+
+    <div id="summaryBox" class="summary-box"></div>
+
+    <!-- Form to add a new case -->
+    <form id="caseForm">
+      <input type="text" id="caseName" placeholder="Case Name" required>
+      <input type="date" id="caseDate" required>
+      <input type="time" id="caseTime" required>
+      <input type="text" id="staffName" placeholder="Staff Assigned" required>
+      <input type="text" id="caseNotes" placeholder="Notes (optional)">
+      <button type="submit" id="submitBtn">Add Case</button>
+    </form>
+
+    <!-- Search and sort controls -->
+    <div class="controls">
+      <input type="text" id="searchInput" placeholder="🔍 Search by case name or staff...">
+      <select id="sortSelect">
+        <option value="date">Sort: Soonest Date</option>
+        <option value="name">Sort: Case Name (A-Z)</option>
+        <option value="staff">Sort: Staff (A-Z)</option>
+      </select>
+    </div>
+
+    <!-- Table showing all cases -->
+    <table id="caseTable">
+      <thead>
+        <tr>
+          <th>Case Name</th>
+          <th>Court Date</th>
+          <th>Time</th>
+          <th>Staff</th>
+          <th>Notes</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="caseTableBody">
+        <!-- Rows will be added here by JavaScript -->
+      </tbody>
+    </table>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

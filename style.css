@@ -1,0 +1,220 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f5f0f2;
+  padding: 40px 20px;
+  color: #2b2b2b;
+}
+
+.container {
+  max-width: 950px;
+  margin: 0 auto;
+  background: white;
+  padding: 35px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(139, 16, 66, 0.08);
+}
+
+/* Header with logo */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f0e0e6;
+}
+
+.logo {
+  height: 65px;
+  width: auto;
+}
+
+.header h1 {
+  color: #8B1042;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 14px;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* Summary box */
+.summary-box {
+  display: none;
+  background: #fdecc8;
+  border: 1px solid #f0c078;
+  color: #6d4c10;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.summary-box.show {
+  display: block;
+}
+
+/* Form styling */
+#caseForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  background: #fbf6f8;
+  padding: 22px;
+  border-radius: 10px;
+  border: 1px solid #f0e0e6;
+}
+
+#caseForm input {
+  flex: 1;
+  min-width: 150px;
+  padding: 11px;
+  border: 1px solid #d8c2cb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2b2b2b;
+  background: white;
+}
+
+#caseForm input:focus {
+  outline: none;
+  border-color: #8B1042;
+  box-shadow: 0 0 0 3px rgba(139, 16, 66, 0.1);
+}
+
+#caseForm button {
+  background: #8B1042;
+  color: white;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+#caseForm button:hover {
+  background: #6d0c33;
+}
+
+/* Search + sort controls */
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.controls input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d8c2cb;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.controls select {
+  padding: 10px 12px;
+  border: 1px solid #d8c2cb;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #2b2b2b;
+}
+
+.controls input:focus,
+.controls select:focus {
+  outline: none;
+  border-color: #8B1042;
+}
+
+/* Table styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 14px 12px;
+  font-size: 14px;
+}
+
+th {
+  background: #8B1042;
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+td {
+  border-bottom: 1px solid #f0e0e6;
+}
+
+tr:hover td {
+  background: #fbf6f8;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 15px;
+}
+
+/* Action buttons */
+.action-btn {
+  border: none;
+  padding: 7px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  margin-right: 6px;
+  transition: background 0.2s ease;
+}
+
+.edit-btn {
+  background: #e8ecf4;
+  color: #34456b;
+}
+
+.edit-btn:hover {
+  background: #d3daea;
+}
+
+.delete-btn {
+  background: #b03050;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #8B1042;
+}
+
+/* Highlight rows within 3 days of court date */
+.urgent {
+  background: #fdecc8 !important;
+}
+
+.urgent:hover td {
+  background: #fbe3ae !important;
+}
+
+/* Editing state row */
+.editing {
+  background: #eaf1ff !important;
+}
