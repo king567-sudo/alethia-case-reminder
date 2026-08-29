@@ -89,12 +89,12 @@ function renderCases() {
     if (editingIndex === index) row.classList.add('editing');
 
     row.innerHTML = `
-      <td>${c.name}</td>
-      <td>${c.date} ${isUrgent ? `<br><small>(${getCountdownLabel(daysRemaining)})</small>` : ''}</td>
-      <td>${c.time}</td>
-      <td>${c.staff}</td>
-      <td>${c.notes || '-'}</td>
-      <td>
+      <td data-label="Case Name">${c.name}</td>
+      <td data-label="Court Date">${c.date} ${isUrgent ? `<br><small>(${getCountdownLabel(daysRemaining)})</small>` : ''}</td>
+      <td data-label="Time">${c.time}</td>
+      <td data-label="Staff">${c.staff}</td>
+      <td data-label="Notes">${c.notes || '-'}</td>
+      <td data-label="Action">
         <button class="action-btn edit-btn" data-index="${index}">Edit</button>
         <button class="action-btn delete-btn" data-index="${index}">Delete</button>
       </td>
