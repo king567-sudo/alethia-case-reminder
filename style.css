@@ -8,15 +8,16 @@
 body {
   font-family: 'Segoe UI', Arial, sans-serif;
   background: #f5f0f2;
-  padding: 40px 20px;
+  padding: 24px 16px;
   color: #2b2b2b;
+  font-size: 16px;
 }
 
 .container {
   max-width: 950px;
   margin: 0 auto;
   background: white;
-  padding: 35px;
+  padding: 24px;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(139, 16, 66, 0.08);
 }
@@ -25,28 +26,30 @@ body {
 .header {
   display: flex;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
   border-bottom: 2px solid #f0e0e6;
 }
 
 .logo {
-  height: 65px;
+  height: 48px;
   width: auto;
+  flex-shrink: 0;
 }
 
 .header h1 {
   color: #8B1042;
-  font-size: 26px;
+  font-size: 20px;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .subtitle {
   color: #888;
-  font-size: 14px;
-  margin-top: 4px;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  margin-top: 2px;
+  letter-spacing: 0.2px;
 }
 
 /* Summary box */
@@ -55,11 +58,11 @@ body {
   background: #fdecc8;
   border: 1px solid #f0c078;
   color: #6d4c10;
-  padding: 12px 16px;
+  padding: 12px 14px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .summary-box.show {
@@ -69,22 +72,21 @@ body {
 /* Form styling */
 #caseForm {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
   background: #fbf6f8;
-  padding: 22px;
+  padding: 16px;
   border-radius: 10px;
   border: 1px solid #f0e0e6;
 }
 
 #caseForm input {
-  flex: 1;
-  min-width: 150px;
-  padding: 11px;
+  width: 100%;
+  padding: 12px;
   border: 1px solid #d8c2cb;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 16px;
   color: #2b2b2b;
   background: white;
 }
@@ -99,12 +101,13 @@ body {
   background: #8B1042;
   color: white;
   border: none;
-  padding: 11px 22px;
+  padding: 13px 20px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   transition: background 0.2s ease;
+  width: 100%;
 }
 
 #caseForm button:hover {
@@ -114,23 +117,18 @@ body {
 /* Search + sort controls */
 .controls {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
-.controls input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid #d8c2cb;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
+.controls input,
 .controls select {
-  padding: 10px 12px;
+  width: 100%;
+  padding: 11px 12px;
   border: 1px solid #d8c2cb;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 15px;
   background: white;
   color: #2b2b2b;
 }
@@ -141,7 +139,7 @@ body {
   border-color: #8B1042;
 }
 
-/* Table styling */
+/* Table styling — desktop default */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -170,15 +168,14 @@ tr:hover td {
 
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 32px 16px;
   color: #999;
-  font-size: 15px;
+  font-size: 14px;
 }
 
-/* Action buttons */
 .action-btn {
   border: none;
-  padding: 7px 12px;
+  padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 13px;
@@ -205,7 +202,6 @@ tr:hover td {
   background: #8B1042;
 }
 
-/* Highlight rows within 3 days of court date */
 .urgent {
   background: #fdecc8 !important;
 }
@@ -214,7 +210,76 @@ tr:hover td {
   background: #fbe3ae !important;
 }
 
-/* Editing state row */
 .editing {
   background: #eaf1ff !important;
+}
+
+/* ===== MOBILE LAYOUT: card-style table ===== */
+@media (max-width: 640px) {
+  .container {
+    padding: 16px;
+    border-radius: 10px;
+  }
+
+  .header h1 {
+    font-size: 18px;
+  }
+
+  .logo {
+    height: 40px;
+  }
+
+  thead {
+    display: none; /* hide the table header row on mobile */
+  }
+
+  table, tbody, tr, td {
+    display: block;
+    width: 100%;
+  }
+
+  tr {
+    margin-bottom: 12px;
+    border: 1px solid #f0e0e6;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  tr.urgent {
+    border-color: #f0c078;
+  }
+
+  td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f5eef1;
+    text-align: right;
+  }
+
+  td:last-child {
+    border-bottom: none;
+    justify-content: flex-end;
+  }
+
+  /* Show a label before each value, pulled from data-label */
+  td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #8B1042;
+    font-size: 12px;
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .empty-state {
+    display: block;
+    text-align: center;
+  }
+
+  .empty-state::before {
+    content: none;
+  }
 }
