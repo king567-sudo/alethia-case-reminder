@@ -1,8 +1,10 @@
-const CACHE_NAME = 'alethia-case-reminder-v2';
+const CACHE_NAME = 'alethia-case-reminder-v3';
 const urlsToCache = [
   'index.html',
   'style.css',
   'script.js',
+  'auth.js',
+  'firebase-config.js',
   'lawfirm logo.jpeg',
   'manifest.json'
 ];
@@ -43,7 +45,7 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
-// Check localStorage-equivalent data and fire notifications
+// Check case data and fire notifications
 async function checkCasesInBackground() {
   const cases = JSON.parse(await getStoredCases()) || [];
   const today = new Date();
