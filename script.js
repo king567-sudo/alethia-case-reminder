@@ -5,8 +5,8 @@ const summaryBox = document.getElementById('summaryBox');
 const searchInput = document.getElementById('searchInput');
 const sortSelect = document.getElementById('sortSelect');
 
-let cases = JSON.parse(localStorage.getItem('cases')) || [];
-let editingIndex = null;
+let cases = []; // now populated live from Firestore
+let editingId = null; // Firestore uses document IDs instead of array index
 
 function getDaysRemaining(dateStr) {
   const today = new Date();
@@ -22,10 +22,6 @@ function getCountdownLabel(days) {
   if (days === 1) return '1 day remaining';
   if (days > 1) return `${days} days remaining`;
   return 'Past due';
-}
-
-function saveCases() {
-  localStorage.setItem('cases', JSON.stringify(cases));
 }
 
 function updateSummary() {
@@ -45,8 +41,7 @@ function updateSummary() {
 function getVisibleCases() {
   const searchTerm = searchInput.value.toLowerCase().trim();
 
-  let filtered = cases.filter((c, index) => {
-    c._originalIndex = index;
+  let filtered = cases.filter((c) => {
     if (!searchTerm) return true;
     return c.name.toLowerCase().includes(searchTerm) || c.staff.toLowerCase().includes(searchTerm);
   });
@@ -82,11 +77,10 @@ function renderCases() {
   visible.forEach((c) => {
     const daysRemaining = getDaysRemaining(c.date);
     const isUrgent = daysRemaining >= 0 && daysRemaining <= 3;
-    const index = c._originalIndex;
 
     const row = document.createElement('tr');
     if (isUrgent) row.classList.add('urgent');
-    if (editingIndex === index) row.classList.add('editing');
+    if (editingId === c.id) row.classList.add('editing');
 
     row.innerHTML = `
       <td data-label="Case Name">${c.name}</td>
@@ -95,8 +89,8 @@ function renderCases() {
       <td data-label="Staff">${c.staff}</td>
       <td data-label="Notes">${c.notes || '-'}</td>
       <td data-label="Action">
-        <button class="action-btn edit-btn" data-index="${index}">Edit</button>
-        <button class="action-btn delete-btn" data-index="${index}">Delete</button>
+        <button class="action-btn edit-btn" data-id="${c.id}">Edit</button>
+        <button class="action-btn delete-btn" data-id="${c.id}">Delete</button>
       </td>
     `;
 
@@ -106,6 +100,7 @@ function renderCases() {
   updateSummary();
 }
 
+// Add or update a case in Firestore
 caseForm.addEventListener('submit', (e) => {
   e.preventDefault();
 
@@ -114,49 +109,52 @@ caseForm.addEventListener('submit', (e) => {
     date: document.getElementById('caseDate').value,
     time: document.getElementById('caseTime').value,
     staff: document.getElementById('staffName').value,
-    notes: document.getElementById('caseNotes').value
+    notes: document.getElementById('caseNotes').value,
+    updatedBy: auth.currentUser ? auth.currentUser.email : 'unknown'
   };
 
-  if (editingIndex !== null) {
-    cases[editingIndex] = caseData;
-    editingIndex = null;
-    submitBtn.textContent = 'Add Case';
+  if (editingId !== null) {
+    db.collection('cases').doc(editingId).update(caseData)
+      .then(() => {
+        editingId = null;
+        submitBtn.textContent = 'Add Case';
+        caseForm.reset();
+      });
   } else {
-    cases.push(caseData);
+    db.collection('cases').add(caseData)
+      .then(() => {
+        caseForm.reset();
+      });
   }
-
-  saveCases();
-  caseForm.reset();
-  renderCases();
 });
 
+// Handle edit/delete clicks
 caseTableBody.addEventListener('click', (e) => {
-  const index = e.target.getAttribute('data-index');
-  if (index === null) return;
+  const id = e.target.getAttribute('data-id');
+  if (id === null) return;
 
   if (e.target.classList.contains('delete-btn')) {
-    const confirmed = confirm(`Delete case "${cases[index].name}"? This cannot be undone.`);
+    const c = cases.find(c => c.id === id);
+    const confirmed = confirm(`Delete case "${c.name}"? This cannot be undone.`);
     if (confirmed) {
-      cases.splice(index, 1);
-      saveCases();
-      if (editingIndex === parseInt(index)) {
-        editingIndex = null;
+      db.collection('cases').doc(id).delete();
+      if (editingId === id) {
+        editingId = null;
         submitBtn.textContent = 'Add Case';
         caseForm.reset();
       }
-      renderCases();
     }
   }
 
   if (e.target.classList.contains('edit-btn')) {
-    const c = cases[index];
+    const c = cases.find(c => c.id === id);
     document.getElementById('caseName').value = c.name;
     document.getElementById('caseDate').value = c.date;
     document.getElementById('caseTime').value = c.time;
     document.getElementById('staffName').value = c.staff;
     document.getElementById('caseNotes').value = c.notes || '';
 
-    editingIndex = parseInt(index);
+    editingId = id;
     submitBtn.textContent = 'Update Case';
     renderCases();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -165,6 +163,17 @@ caseTableBody.addEventListener('click', (e) => {
 
 searchInput.addEventListener('input', renderCases);
 sortSelect.addEventListener('change', renderCases);
+
+// Real-time listener — this replaces localStorage entirely.
+// Every time ANY staff member adds/edits/deletes a case, this fires
+// automatically for everyone, keeping everyone in sync live.
+function startListeningToCases() {
+  db.collection('cases').onSnapshot((snapshot) => {
+    cases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderCases();
+    checkReminders();
+  });
+}
 
 function checkReminders() {
   if (!('Notification' in window)) return;
@@ -195,9 +204,14 @@ function fireNotifications() {
   localStorage.setItem('lastNotifiedDate', today);
 }
 
-renderCases();
-checkReminders();
+// Only start listening to Firestore once someone is actually logged in
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    startListeningToCases();
+  }
+});
 
+// Register the service worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js').then((registration) => {
     console.log('Service Worker registered');
@@ -205,13 +219,6 @@ if ('serviceWorker' in navigator) {
       registration.periodicSync.register('check-reminders', {
         minInterval: 24 * 60 * 60 * 1000
       }).catch(() => console.log('Periodic sync not available/permitted'));
-    }
-  });
-
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data.type === 'GET_CASES') {
-      const casesData = localStorage.getItem('cases') || '[]';
-      event.source.postMessage({ type: 'CASES_DATA', cases: casesData });
     }
   });
 }
