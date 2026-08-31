@@ -10,6 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script src="firebase-config.js"></script>
 </head>
 <body>
@@ -51,76 +52,158 @@
   </div>
 
   <!-- Main app (hidden until logged in AND approved) -->
-  <div class="container" id="appContainer" style="display: none;">
-    <div class="header">
-      <img src="lawfirm logo.jpeg" alt="Alethia LP Logo" class="logo" id="logoTrigger" style="cursor: pointer;">
+  <div class="app-shell" id="appContainer" style="display: none;">
 
-      <div>
-        <h1>Alethia LP</h1>
-        <p class="subtitle">Case Reminder System</p>
+    <!-- About the Firm popup -->
+    <div id="aboutModal" class="about-overlay" style="display: none;">
+      <div class="about-box">
+        <button id="closeAbout" class="close-btn">&times;</button>
+        <h2>Full-Service Corporate & Commercial Law Firm in Nigeria</h2>
+        <p>At <strong>Alethia LP</strong>, we are a general practice law firm specializing in Commercial Law, Dispute Resolution, Banking & Finance, Energy Transactions, and Shipping/Admiralty.</p>
+        <p>Our philosophy is simple — to deliver precision-driven legal solutions that empower our clients to achieve clarity, stability, and success in complex business environments.</p>
+        <p>We integrate deep sector knowledge with commercial insight, ensuring that every piece of advice we provide is strategic, practical, and forward-thinking. Whether navigating a cross-border transaction or resolving a complex dispute, our lawyers bring clarity and confidence to every engagement.</p>
       </div>
-      <div class="user-info">
-        <span id="userEmail"></span>
-        <button id="logoutBtn">Log Out</button>
+    </div>
+
+    <!-- ===== HOME TAB ===== -->
+    <div class="tab-view" id="tab-home">
+      <div class="container">
+        <div class="header">
+          <img src="lawfirm logo.jpeg" alt="Alethia LP Logo" class="logo" id="logoTrigger" style="cursor: pointer;">
+          <div>
+            <h1>Alethia LP</h1>
+            <p class="subtitle">Case Reminder System</p>
+          </div>
+        </div>
+
+        <div id="summaryBox" class="summary-box"></div>
+
+        <div id="filterBanner" class="filter-banner" style="display: none;">
+          <span id="filterText"></span>
+          <button id="clearFilterBtn">Clear</button>
+        </div>
+
+        <form id="caseForm">
+          <input type="text" id="caseName" placeholder="Case Name" required>
+          <input type="date" id="caseDate" required>
+          <input type="time" id="caseTime" required>
+          <input type="text" id="staffName" placeholder="Staff Assigned" required>
+          <input type="text" id="caseNotes" placeholder="Notes (optional)">
+          <button type="submit" id="submitBtn">Add Case</button>
+        </form>
+
+        <div class="controls">
+          <input type="text" id="searchInput" placeholder="🔍 Search by case name or staff...">
+          <select id="sortSelect">
+            <option value="date">Sort: Soonest Date</option>
+            <option value="name">Sort: Case Name (A-Z)</option>
+            <option value="staff">Sort: Staff (A-Z)</option>
+          </select>
+        </div>
+
+        <table id="caseTable">
+          <thead>
+            <tr>
+              <th>Case Name</th>
+              <th>Court Date</th>
+              <th>Time</th>
+              <th>Staff</th>
+              <th>Notes</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="caseTableBody"></tbody>
+        </table>
       </div>
     </div>
-<!-- About the Firm popup -->
-<div id="aboutModal" class="about-overlay" style="display: none;">
-  <div class="about-box">
-    <button id="closeAbout" class="close-btn">&times;</button>
-    <h2>Full-Service Corporate & Commercial Law Firm in Nigeria</h2>
-    <p>At <strong>Alethia LP</strong>, we are a general practice law firm specializing in Commercial Law, Dispute Resolution, Banking & Finance, Energy Transactions, and Shipping/Admiralty.</p>
-    <p>Our philosophy is simple — to deliver precision-driven legal solutions that empower our clients to achieve clarity, stability, and success in complex business environments.</p>
-    <p>We integrate deep sector knowledge with commercial insight, ensuring that every piece of advice we provide is strategic, practical, and forward-thinking. Whether navigating a cross-border transaction or resolving a complex dispute, our lawyers bring clarity and confidence to every engagement.</p>
-  </div>
-</div>
-    <!-- Director-only pending approvals panel -->
-    <div id="adminPanel" class="admin-panel" style="display: none;">
-      <h3>⏳ Pending Staff Approvals</h3>
-      <div id="pendingList"></div>
+
+    <!-- ===== ACTIVITIES TAB (director only) ===== -->
+    <div class="tab-view" id="tab-activities" style="display: none;">
+      <div class="container">
+        <div class="header">
+          <img src="lawfirm logo.jpeg" alt="Alethia LP Logo" class="logo">
+          <div>
+            <h1>Activities</h1>
+            <p class="subtitle">Pending Staff Approvals</p>
+          </div>
+        </div>
+
+        <div id="pendingList"></div>
+      </div>
     </div>
 
-    <div id="summaryBox" class="summary-box"></div>
+    <!-- ===== MESSAGES TAB ===== -->
+    <div class="tab-view" id="tab-messages" style="display: none;">
+      <div class="messages-wrap">
+        <div class="messages-header">
+          <img src="lawfirm logo.jpeg" alt="Alethia LP Logo" class="logo">
+          <div>
+            <h1>Firm Chat</h1>
+            <p class="subtitle">All staff</p>
+          </div>
+        </div>
 
-    <!-- Form to add a new case -->
-    <form id="caseForm">
-      <input type="text" id="caseName" placeholder="Case Name" required>
-      <input type="date" id="caseDate" required>
-      <input type="time" id="caseTime" required>
-      <input type="text" id="staffName" placeholder="Staff Assigned" required>
-      <input type="text" id="caseNotes" placeholder="Notes (optional)">
-      <button type="submit" id="submitBtn">Add Case</button>
-    </form>
+        <div id="messagesList" class="messages-list"></div>
 
-    <!-- Search and sort controls -->
-    <div class="controls">
-      <input type="text" id="searchInput" placeholder="🔍 Search by case name or staff...">
-      <select id="sortSelect">
-        <option value="date">Sort: Soonest Date</option>
-        <option value="name">Sort: Case Name (A-Z)</option>
-        <option value="staff">Sort: Staff (A-Z)</option>
-      </select>
+        <form id="messageForm" class="message-form">
+          <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off" required>
+          <button type="submit">Send</button>
+        </form>
+      </div>
     </div>
 
-    <!-- Table showing all cases -->
-    <table id="caseTable">
-      <thead>
-        <tr>
-          <th>Case Name</th>
-          <th>Court Date</th>
-          <th>Time</th>
-          <th>Staff</th>
-          <th>Notes</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="caseTableBody">
-        <!-- Rows will be added here by JavaScript -->
-      </tbody>
-    </table>
+    <!-- ===== ME TAB ===== -->
+    <div class="tab-view" id="tab-me" style="display: none;">
+      <div class="container">
+        <div class="me-profile">
+          <div class="me-avatar" id="meAvatar"></div>
+          <h2 id="meName"></h2>
+          <p id="meEmail" class="subtitle"></p>
+        </div>
+
+        <div class="me-stats">
+          <div class="me-stat-box" id="statBoxMine">
+            <span class="me-stat-number" id="myCaseCount">0</span>
+            <span class="me-stat-label">Cases you've added</span>
+          </div>
+          <div class="me-stat-box" id="statBoxTotal">
+            <span class="me-stat-number" id="totalCaseCount">0</span>
+            <span class="me-stat-label">Total firm cases</span>
+          </div>
+          <div class="me-stat-box" id="statBoxUrgent">
+            <span class="me-stat-number" id="urgentCaseCount">0</span>
+            <span class="me-stat-label">Urgent this week</span>
+          </div>
+        </div>
+
+        <button id="logoutBtn" class="me-logout-btn">Log Out</button>
+      </div>
+    </div>
+
+    <!-- Bottom navigation -->
+    <div class="bottom-nav" id="bottomNav">
+      <button class="nav-btn active" data-tab="home">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </button>
+      <button class="nav-btn" data-tab="activities" id="activitiesNavBtn" style="display: none;">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Activities</span>
+      </button>
+      <button class="nav-btn" data-tab="messages">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Messages</span>
+      </button>
+      <button class="nav-btn" data-tab="me">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Me</span>
+      </button>
+    </div>
   </div>
 
   <script src="auth.js"></script>
   <script src="script.js"></script>
+  <script src="chat.js"></script>
 </body>
 </html>
