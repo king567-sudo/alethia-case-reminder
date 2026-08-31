@@ -2,9 +2,9 @@ name: Daily Case Reminder Check
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # runs every day at 6:00 AM UTC (adjust if needed)
-  workflow_dispatch:        # also lets you trigger it manually for testing
-
+    - cron: '0 7 * * *'    # 8:00 AM Nigeria time
+    - cron: '0 14 * * *'   # 3:00 PM Nigeria time
+  workflow_dispatch:
 jobs:
   check-reminders:
     runs-on: ubuntu-latest
