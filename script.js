@@ -4,9 +4,13 @@ const submitBtn = document.getElementById('submitBtn');
 const summaryBox = document.getElementById('summaryBox');
 const searchInput = document.getElementById('searchInput');
 const sortSelect = document.getElementById('sortSelect');
+const filterBanner = document.getElementById('filterBanner');
+const filterText = document.getElementById('filterText');
+const clearFilterBtn = document.getElementById('clearFilterBtn');
 
-let cases = []; // now populated live from Firestore
-let editingId = null; // Firestore uses document IDs instead of array index
+let cases = [];
+let editingId = null;
+let activeFilter = null; // 'mine' | 'urgent' | null
 
 function getDaysRemaining(dateStr) {
   const today = new Date();
@@ -27,7 +31,7 @@ function getCountdownLabel(days) {
 function updateSummary() {
   const urgentCount = cases.filter(c => {
     const d = getDaysRemaining(c.date);
-    return d >= 0 && d <= 3;
+    return d >= 0 && d <= 3 && c.status !== 'completed';
   }).length;
 
   if (urgentCount > 0) {
@@ -38,10 +42,40 @@ function updateSummary() {
   }
 }
 
+function applyFilter(type) {
+  if (type === 'all') {
+    activeFilter = null;
+    filterBanner.style.display = 'none';
+  } else if (type === 'mine') {
+    activeFilter = 'mine';
+    filterText.textContent = `Showing cases you've added`;
+    filterBanner.style.display = 'flex';
+  } else if (type === 'urgent') {
+    activeFilter = 'urgent';
+    filterText.textContent = `Showing urgent cases (next 3 days)`;
+    filterBanner.style.display = 'flex';
+  }
+  renderCases();
+}
+
+function clearHomeFilter() {
+  activeFilter = null;
+  filterBanner.style.display = 'none';
+  renderCases();
+}
+
+clearFilterBtn.addEventListener('click', clearHomeFilter);
+
 function getVisibleCases() {
   const searchTerm = searchInput.value.toLowerCase().trim();
+  const myEmail = auth.currentUser ? auth.currentUser.email : null;
 
   let filtered = cases.filter((c) => {
+    if (activeFilter === 'mine' && c.updatedBy !== myEmail) return false;
+    if (activeFilter === 'urgent') {
+      const d = getDaysRemaining(c.date);
+      if (!(d >= 0 && d <= 3)) return false;
+    }
     if (!searchTerm) return true;
     return c.name.toLowerCase().includes(searchTerm) || c.staff.toLowerCase().includes(searchTerm);
   });
@@ -65,8 +99,8 @@ function renderCases() {
   if (visible.length === 0) {
     caseTableBody.innerHTML = `
       <tr>
-        <td colspan="6" class="empty-state">
-          ${cases.length === 0 ? 'No cases yet — add your first one above ⚖️' : 'No cases match your search.'}
+        <td colspan="7" class="empty-state">
+          ${cases.length === 0 ? 'No cases yet — add your first one above ⚖️' : 'No cases match your search or filter.'}
         </td>
       </tr>
     `;
@@ -76,11 +110,21 @@ function renderCases() {
 
   visible.forEach((c) => {
     const daysRemaining = getDaysRemaining(c.date);
-    const isUrgent = daysRemaining >= 0 && daysRemaining <= 3;
+    const isCompleted = c.status === 'completed';
+    const isUrgent = !isCompleted && daysRemaining >= 0 && daysRemaining <= 3;
 
     const row = document.createElement('tr');
     if (isUrgent) row.classList.add('urgent');
+    if (isCompleted) row.classList.add('completed-row');
     if (editingId === c.id) row.classList.add('editing');
+
+    const statusBadge = isCompleted
+      ? '<span class="status-badge status-completed">Completed</span>'
+      : '<span class="status-badge status-active">Active</span>';
+
+    const statusActionBtn = isCompleted
+      ? `<button class="action-btn reopen-btn" data-id="${c.id}">Reopen</button>`
+      : `<button class="action-btn done-btn" data-id="${c.id}">Mark Done</button>`;
 
     row.innerHTML = `
       <td data-label="Case Name">${c.name}</td>
@@ -88,7 +132,9 @@ function renderCases() {
       <td data-label="Time">${c.time}</td>
       <td data-label="Staff">${c.staff}</td>
       <td data-label="Notes">${c.notes || '-'}</td>
+      <td data-label="Status">${statusBadge}</td>
       <td data-label="Action">
+        ${statusActionBtn}
         <button class="action-btn edit-btn" data-id="${c.id}">Edit</button>
         <button class="action-btn delete-btn" data-id="${c.id}">Delete</button>
       </td>
@@ -100,7 +146,6 @@ function renderCases() {
   updateSummary();
 }
 
-// Add or update a case in Firestore
 caseForm.addEventListener('submit', (e) => {
   e.preventDefault();
 
@@ -121,6 +166,7 @@ caseForm.addEventListener('submit', (e) => {
         caseForm.reset();
       });
   } else {
+    caseData.status = 'active';
     db.collection('cases').add(caseData)
       .then(() => {
         caseForm.reset();
@@ -128,7 +174,6 @@ caseForm.addEventListener('submit', (e) => {
   }
 });
 
-// Handle edit/delete clicks
 caseTableBody.addEventListener('click', (e) => {
   const id = e.target.getAttribute('data-id');
   if (id === null) return;
@@ -159,59 +204,51 @@ caseTableBody.addEventListener('click', (e) => {
     renderCases();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  if (e.target.classList.contains('done-btn')) {
+    db.collection('cases').doc(id).update({ status: 'completed' });
+  }
+
+  if (e.target.classList.contains('reopen-btn')) {
+    db.collection('cases').doc(id).update({ status: 'active' });
+  }
 });
 
 searchInput.addEventListener('input', renderCases);
 sortSelect.addEventListener('change', renderCases);
 
-// Real-time listener — this replaces localStorage entirely.
-// Every time ANY staff member adds/edits/deletes a case, this fires
-// automatically for everyone, keeping everyone in sync live.
 function startListeningToCases() {
   db.collection('cases').onSnapshot((snapshot) => {
     cases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderCases();
-    checkReminders();
   });
 }
 
-function checkReminders() {
-  if (!('Notification' in window)) return;
-
-  if (Notification.permission === 'granted') {
-    fireNotifications();
-  } else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') fireNotifications();
-    });
-  }
-}
-
-function fireNotifications() {
-  const today = new Date().toDateString();
-  const lastNotified = localStorage.getItem('lastNotifiedDate');
-  if (lastNotified === today) return;
-
-  cases.forEach(c => {
-    const daysRemaining = getDaysRemaining(c.date);
-    if (daysRemaining >= 0 && daysRemaining <= 3) {
-      new Notification(`⚖️ Case Reminder: ${c.name}`, {
-        body: `${getCountdownLabel(daysRemaining)} — Staff: ${c.staff}`,
-      });
-    }
-  });
-
-  localStorage.setItem('lastNotifiedDate', today);
-}
-
-// Only start listening to Firestore once someone is actually logged in
 auth.onAuthStateChanged((user) => {
   if (user) {
     startListeningToCases();
   }
 });
 
-// Register the service worker
+function updateMeStats() {
+  const myEmail = auth.currentUser ? auth.currentUser.email : null;
+
+  const myCaseCount = cases.filter(c => c.updatedBy === myEmail).length;
+  const totalCaseCount = cases.length;
+  const urgentCaseCount = cases.filter(c => {
+    const d = getDaysRemaining(c.date);
+    return d >= 0 && d <= 3 && c.status !== 'completed';
+  }).length;
+
+  const myCaseEl = document.getElementById('myCaseCount');
+  const totalCaseEl = document.getElementById('totalCaseCount');
+  const urgentCaseEl = document.getElementById('urgentCaseCount');
+
+  if (myCaseEl) myCaseEl.textContent = myCaseCount;
+  if (totalCaseEl) totalCaseEl.textContent = totalCaseCount;
+  if (urgentCaseEl) urgentCaseEl.textContent = urgentCaseCount;
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js').then((registration) => {
     console.log('Service Worker registered');
@@ -220,5 +257,11 @@ if ('serviceWorker' in navigator) {
         minInterval: 24 * 60 * 60 * 1000
       }).catch(() => console.log('Periodic sync not available/permitted'));
     }
+  });
+
+  navigator.serviceWorker.register('firebase-messaging-sw.js').then(() => {
+    console.log('Firebase Messaging Service Worker registered');
+  }).catch((err) => {
+    console.log('Firebase Messaging SW registration failed:', err);
   });
 }
