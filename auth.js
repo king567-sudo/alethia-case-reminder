@@ -7,7 +7,6 @@ const loginEmail = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
 const loginError = document.getElementById('loginError');
 const logoutBtn = document.getElementById('logoutBtn');
-const userEmailDisplay = document.getElementById('userEmail');
 
 // Signup elements
 const signupBox = document.getElementById('signupBox');
@@ -20,13 +19,23 @@ const signupSuccess = document.getElementById('signupSuccess');
 const showSignup = document.getElementById('showSignup');
 const showLogin = document.getElementById('showLogin');
 
-// Pending approval elements
+// Pending approval (login-gate) elements
 const pendingBox = document.getElementById('pendingBox');
 const pendingLogoutBtn = document.getElementById('pendingLogoutBtn');
 
-// Admin panel elements
-const adminPanel = document.getElementById('adminPanel');
+// Activities tab elements
 const pendingList = document.getElementById('pendingList');
+const activitiesNavBtn = document.getElementById('activitiesNavBtn');
+
+// About popup elements
+const logoTrigger = document.getElementById('logoTrigger');
+const aboutModal = document.getElementById('aboutModal');
+const closeAbout = document.getElementById('closeAbout');
+
+// Me tab stat boxes
+const statBoxMine = document.getElementById('statBoxMine');
+const statBoxTotal = document.getElementById('statBoxTotal');
+const statBoxUrgent = document.getElementById('statBoxUrgent');
 
 const DIRECTOR_EMAIL = 'alethia.legal@gmail.com';
 
@@ -92,11 +101,10 @@ signupBtn.addEventListener('click', () => {
       const uid = userCredential.user.uid;
       const isDirector = email.toLowerCase() === DIRECTOR_EMAIL.toLowerCase();
 
-      // Save profile info + approval status in Firestore
       return db.collection('users').doc(uid).set({
         name: name,
         email: email,
-        approved: isDirector, // director is auto-approved
+        approved: isDirector,
         isDirector: isDirector,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -116,11 +124,11 @@ signupBtn.addEventListener('click', () => {
     });
 });
 
-// Logout (from either the main app or the pending screen)
+// Logout
 logoutBtn.addEventListener('click', () => auth.signOut());
 pendingLogoutBtn.addEventListener('click', () => auth.signOut());
 
-// Show the correct screen based on login + approval status
+// Screen switching (login-gate level: login / signup / pending / app)
 function showLoginScreen() {
   loginScreen.style.display = 'flex';
   appContainer.style.display = 'none';
@@ -140,22 +148,73 @@ function showPendingScreen() {
 function showApp(userData) {
   loginScreen.style.display = 'none';
   appContainer.style.display = 'block';
-  userEmailDisplay.textContent = userData.email;
+
+  setupPushNotifications(auth.currentUser);
+  setupMeTab(userData);
+  window.currentUserName = userData.name;
+  if (typeof initChat === 'function') initChat(userData);
 
   if (userData.isDirector) {
-    adminPanel.style.display = 'block';
+    activitiesNavBtn.style.display = 'flex';
     startListeningToPendingUsers();
   } else {
-    adminPanel.style.display = 'none';
+    activitiesNavBtn.style.display = 'none';
+  }
+
+  switchTab('home');
+}
+
+function setupMeTab(userData) {
+  document.getElementById('meName').textContent = userData.name;
+  document.getElementById('meEmail').textContent = userData.email;
+  document.getElementById('meAvatar').textContent = userData.name.charAt(0).toUpperCase();
+}
+
+// Tab switching (inside the app: Home / Activities / Messages / Me)
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-view').forEach(el => el.style.display = 'none');
+  document.getElementById('tab-' + tabName).style.display = 'block';
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+  });
+
+  if (tabName === 'me' && typeof updateMeStats === 'function') {
+    updateMeStats();
   }
 }
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.getAttribute('data-tab');
+    if (tabName === 'home' && typeof clearHomeFilter === 'function') {
+      clearHomeFilter();
+    }
+    switchTab(tabName);
+  });
+});
+
+// Tap a "Me" stat box to jump to Home, filtered accordingly
+statBoxMine.addEventListener('click', () => {
+  applyFilter('mine');
+  switchTab('home');
+});
+
+statBoxTotal.addEventListener('click', () => {
+  applyFilter('all');
+  switchTab('home');
+});
+
+statBoxUrgent.addEventListener('click', () => {
+  applyFilter('urgent');
+  switchTab('home');
+});
 
 // Main auth state watcher
 auth.onAuthStateChanged((user) => {
   if (user) {
     db.collection('users').doc(user.uid).get().then((doc) => {
       if (!doc.exists) {
-        // Safety fallback — shouldn't normally happen
         showLoginScreen();
         return;
       }
@@ -171,7 +230,7 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Director-only: listen for pending users and render approve buttons
+// Director-only: listen for pending users (Activities tab)
 function startListeningToPendingUsers() {
   db.collection('users').where('approved', '==', false).onSnapshot((snapshot) => {
     if (snapshot.empty) {
@@ -196,17 +255,14 @@ function startListeningToPendingUsers() {
   });
 }
 
-// Handle approve button clicks (event delegation since buttons are dynamic)
 pendingList.addEventListener('click', (e) => {
   if (e.target.classList.contains('approve-btn')) {
     const uid = e.target.getAttribute('data-uid');
     db.collection('users').doc(uid).update({ approved: true });
   }
 });
-const logoTrigger = document.getElementById('logoTrigger');
-const aboutModal = document.getElementById('aboutModal');
-const closeAbout = document.getElementById('closeAbout');
 
+// About the Firm popup
 logoTrigger.addEventListener('click', () => {
   aboutModal.style.display = 'flex';
 });
@@ -215,9 +271,34 @@ closeAbout.addEventListener('click', () => {
   aboutModal.style.display = 'none';
 });
 
-// Also close if user taps outside the box (on the dark overlay)
 aboutModal.addEventListener('click', (e) => {
   if (e.target === aboutModal) {
     aboutModal.style.display = 'none';
   }
+});
+
+// Push notifications: request permission and register this device's token
+function setupPushNotifications(user) {
+  if (!('Notification' in window)) return;
+
+  Notification.requestPermission().then((permission) => {
+    if (permission === 'granted') {
+      messaging.getToken({ vapidKey: VAPID_KEY }).then((token) => {
+        if (token) {
+          db.collection('users').doc(user.uid).update({
+            fcmTokens: firebase.firestore.FieldValue.arrayUnion(token)
+          });
+        }
+      }).catch((err) => {
+        console.log('Could not get push token:', err);
+      });
+    }
+  });
+}
+
+messaging.onMessage((payload) => {
+  new Notification(payload.notification.title, {
+    body: payload.notification.body,
+    icon: 'lawfirm logo.jpeg'
+  });
 });
