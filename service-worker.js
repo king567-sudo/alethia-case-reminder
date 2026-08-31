@@ -1,14 +1,14 @@
-const CACHE_NAME = 'alethia-case-reminder-v4';
+const CACHE_NAME = 'alethia-case-reminder-v4';const CACHE_NAME = 'alethia-case-reminder-v4';
 const urlsToCache = [
   'index.html',
   'style.css',
   'script.js',
   'auth.js',
+  'chat.js',
   'firebase-config.js',
   'lawfirm logo.jpeg',
   'manifest.json'
 ];
-
 // Install: cache the app's core files so it works offline too
 self.addEventListener('install', (event) => {
   event.waitUntil(
